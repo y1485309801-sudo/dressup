@@ -91,19 +91,14 @@ body {
   position: absolute;
   top: 0; left: 0; right: 0;
   z-index: 30;
-  background: rgba(247,247,247,0.82);
-  backdrop-filter: blur(24px) saturate(200%);
-  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  background: #f2f2f2;
   border-bottom: 1px solid rgba(0,0,0,0.06);
 }
 .w-nav {
   height: 46px;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 20px;
-  margin-top: calc(env(safe-area-inset-top, 44px) + 8px);
-  position: relative;
-}
-.w-nav-title {
+  margin-top: calc(env(safe-area-inset-top, 44px) + 2px);
   font-size: 18px; font-weight: 400; color: #111; letter-spacing: -0.4px;
   position: absolute; left: 50%; transform: translateX(-50%);
 }
@@ -134,7 +129,7 @@ body {
 /* Scroll area */
 .w-scroll {
   position: absolute;
-  top: 142px;
+  top: calc(env(safe-area-inset-top, 44px) + 98px);
   left: 0; right: 0;
   bottom: 96px;
   overflow-y: scroll;
@@ -232,8 +227,9 @@ body {
 
 /* FAB */
 .w-fab {
-  position: absolute; bottom: 88px; right: 20px;
-  width: 52px; height: 52px; background: #111;
+  position: absolute;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px)); right: 20px;
+  width: 56px; height: 56px; background: #111;
   border-radius: 18px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; z-index: 35;
@@ -244,20 +240,23 @@ body {
 
 /* ── Add Sheet ── */
 .w-overlay {
-  position: absolute; inset: 0;
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.3); z-index: 60;
   opacity: 0; pointer-events: none;
   transition: opacity 0.3s ease;
-  border-radius: 54px;
+  border-radius: 0;
 }
 .w-overlay.open { opacity:1; pointer-events:all; }
 .w-sheet {
   position: absolute; bottom: 0; left: 0; right: 0;
   background: #fff; border-radius: 28px 28px 0 0;
-  padding: 16px 20px 52px;
+  padding: 16px 20px calc(52px + env(safe-area-inset-bottom, 0px));
   transform: translateY(100%);
   transition: transform 0.38s cubic-bezier(0.4,0,0.2,1);
   z-index: 61;
+  max-height: 82vh;
+  overflow-y: auto;
 }
 .w-overlay.open .w-sheet { transform: translateY(0); }
 .w-handle { width:36px; height:4px; background:rgba(0,0,0,0.12); border-radius:2px; margin: 0 auto 20px; }
@@ -727,16 +726,14 @@ body {
 
 .d-header {
   position: absolute; top:0; left:0; right:0; z-index:30;
-  background: rgba(247,247,247,0.82);
-  backdrop-filter: blur(24px) saturate(200%);
-  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  background: #f0f0f0;
   border-bottom: 1px solid rgba(0,0,0,0.06);
 }
 .d-nav {
   height: 56px;
   display:flex; align-items:center; justify-content:space-between;
   padding: 0 20px; position:relative;
-  margin-top: calc(env(safe-area-inset-top, 44px) + 8px);
+  margin-top: calc(env(safe-area-inset-top, 44px) + 2px);
 }
 .d-nav-title {
   font-size:18px; font-weight:400; letter-spacing:-0.4px; color:#111;
@@ -755,7 +752,7 @@ body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   background: #f0f0f0;
-  padding-top: 115px;
+  padding-top: calc(env(safe-area-inset-top, 44px) + 66px);
   padding-bottom: 160px;
 }
 .d-scroll::-webkit-scrollbar { display:none; }
@@ -861,7 +858,8 @@ body {
 
 /* CTA area */
 .d-cta-area {
-  position: absolute; bottom: 88px; right: 20px;
+  position: absolute;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px)); right: 20px;
   display: flex; align-items: center;
   z-index: 20; gap: 8px;
 }
