@@ -100,7 +100,7 @@ body {
   height: 46px;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 20px;
-  margin-top: 54px;
+  margin-top: calc(env(safe-area-inset-top, 44px) + 8px);
   position: relative;
 }
 .w-nav-title {
@@ -323,7 +323,7 @@ body {
 .w-detail-hero {
   height: 280px; background: #fff;
   display: flex; align-items: center; justify-content: center;
-  position: relative; flex-shrink: 0; padding-top: 54px;
+  position: relative; flex-shrink: 0; padding-top: calc(env(safe-area-inset-top, 44px) + 10px);
 }
 .w-detail-hero img { width:200px; height:200px; object-fit:contain; }
 .w-detail-close {
@@ -373,7 +373,7 @@ body {
   top: 0; left: 0; right: 0; bottom: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding-top: 54px;
+  padding-top: calc(env(safe-area-inset-top, 44px) + 10px);
   padding-bottom: 100px;
 }
 .cal-scroll::-webkit-scrollbar { display: none; }
@@ -558,7 +558,7 @@ body {
   transform: translateY(100%);
   transition: transform 0.42s cubic-bezier(0.4,0,0.2,1);
   overflow: hidden;
-  padding-top: 54px;
+  padding-top: calc(env(safe-area-inset-top, 44px) + 10px);
 }
 .ai-overlay.open { transform: translateY(0); }
 .ai-close {
@@ -736,7 +736,7 @@ body {
   height: 56px;
   display:flex; align-items:center; justify-content:space-between;
   padding: 0 20px; position:relative;
-  margin-top: 54px;
+  margin-top: calc(env(safe-area-inset-top, 44px) + 8px);
 }
 .d-nav-title {
   font-size:18px; font-weight:400; letter-spacing:-0.4px; color:#111;
