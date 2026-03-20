@@ -95,10 +95,13 @@ body {
   border-bottom: 1px solid rgba(0,0,0,0.06);
 }
 .w-nav {
-  height: 46px;
+  height: 44px;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 20px;
-  margin-top: calc(env(safe-area-inset-top, 44px) + 2px);
+  margin-top: env(safe-area-inset-top, 44px);
+  position: relative;
+}
+.w-nav-title {
   font-size: 18px; font-weight: 400; color: #111; letter-spacing: -0.4px;
   position: absolute; left: 50%; transform: translateX(-50%);
 }
@@ -112,7 +115,7 @@ body {
 /* Filter pills */
 .w-filter {
   display: flex; gap: 8px;
-  padding: 0px 20px 8px;
+  padding: 6px 20px 10px;
   overflow-x: auto;
 }
 .w-filter::-webkit-scrollbar { display: none; }
@@ -129,7 +132,7 @@ body {
 /* Scroll area */
 .w-scroll {
   position: absolute;
-  top: calc(env(safe-area-inset-top, 44px) + 98px);
+  top: calc(env(safe-area-inset-top, 44px) + 96px);
   left: 0; right: 0;
   bottom: 96px;
   overflow-y: scroll;
@@ -235,6 +238,7 @@ body {
   cursor: pointer; z-index: 35;
   box-shadow: 0 6px 20px rgba(0,0,0,0.28);
   transition: transform 0.15s;
+  animation: floatUp 0.5s 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
 }
 .w-fab:active { transform: scale(0.93); }
 
@@ -733,7 +737,7 @@ body {
   height: 56px;
   display:flex; align-items:center; justify-content:space-between;
   padding: 0 20px; position:relative;
-  margin-top: calc(env(safe-area-inset-top, 44px) + 2px);
+  margin-top: env(safe-area-inset-top, 44px);
 }
 .d-nav-title {
   font-size:18px; font-weight:400; letter-spacing:-0.4px; color:#111;
@@ -752,7 +756,7 @@ body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   background: #f0f0f0;
-  padding-top: calc(env(safe-area-inset-top, 44px) + 66px);
+  padding-top: calc(env(safe-area-inset-top, 44px) + 60px);
   padding-bottom: 160px;
 }
 .d-scroll::-webkit-scrollbar { display:none; }
@@ -862,6 +866,7 @@ body {
   bottom: calc(88px + env(safe-area-inset-bottom, 0px)); right: 20px;
   display: flex; align-items: center;
   z-index: 20; gap: 8px;
+  animation: floatUp 0.5s 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
 }
 
 /* 液态玻璃 bar */
@@ -1403,6 +1408,14 @@ const calOutfits = JSON.parse(localStorage.getItem('dressup_calendar') || '{}');
 function switchTab(tab) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+
+  function resetAnim(el) {
+    if (!el) return;
+    el.style.animation = 'none';
+    el.offsetHeight;
+    el.style.animation = '';
+  }
+
   if (tab === 'calendar') {
     document.getElementById('pageCalendar').classList.add('active');
     document.getElementById('tabCalendar').classList.add('active');
@@ -1410,9 +1423,12 @@ function switchTab(tab) {
   } else if (tab === 'wardrobe') {
     document.getElementById('pageWardrobe').classList.add('active');
     document.getElementById('tabWardrobe').classList.add('active');
+    resetAnim(document.querySelector('.w-fab'));
   } else if (tab === 'dressup') {
     document.getElementById('pageDressup').classList.add('active');
     document.getElementById('tabDressup').classList.add('active');
+    resetAnim(document.getElementById('dBottomBar'));
+    resetAnim(document.getElementById('dCtaArea'));
   } else {
     document.getElementById('tabProfile').classList.add('active');
   }
