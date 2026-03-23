@@ -2002,13 +2002,13 @@ function dStartDressup() {
 
 async function aiCallReplicate(personUrl, garmentUrl) {
   const statusText = document.getElementById('aiStatusText');
-  // 你的 Vercel 后端地址，部署后替换
-  const BACKEND_URL = 'https://dressup-backend-ecru.vercel.app/api/dressup';
+  const BACKEND = 'https://dressup-backend-ecru.vercel.app/api';
 
   try {
     statusText.textContent = '正在为你换装';
 
-    const res = await fetch(BACKEND_URL, {
+    // 1. 启动任务
+    const startRes = await fetch(`${BACKEND}/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2017,14 +2017,35 @@ async function aiCallReplicate(personUrl, garmentUrl) {
       })
     });
 
-    const data = await res.json();
+    const startData = await startRes.json();
+    if (!startData.success) throw new Error(startData.error || '启动失败');
 
-    if (!res.ok || !data.success) {
-      throw new Error(data.error || '换装失败');
+    const predictionId = startData.predictionId;
+
+    // 2. 轮询结果
+    const msgs = ['正在为你换装', '分析体型中', 'AI 生成中', '即将完成'];
+    let attempts = 0;
+
+    while (attempts < 60) {
+      await new Promise(r => setTimeout(r, 3000));
+      attempts++;
+
+      statusText.textContent = msgs[Math.min(Math.floor(attempts / 5), msgs.length - 1)];
+
+      const resultRes = await fetch(`${BACKEND}/result?id=${predictionId}`);
+      const resultData = await resultRes.json();
+
+      if (resultData.status === 'succeeded') {
+        document.getElementById('aiResultImg').style.backgroundImage = `url('${resultData.imageUrl}')`;
+        aiShowResult();
+        return;
+      } else if (resultData.status === 'failed') {
+        throw new Error(resultData.error || '生成失败');
+      }
+      // 继续轮询 starting/processing
     }
 
-    document.getElementById('aiResultImg').style.backgroundImage = `url('${data.imageUrl}')`;
-    aiShowResult();
+    throw new Error('等待超时，请重试');
 
   } catch (err) {
     console.error('换衣失败:', err);
