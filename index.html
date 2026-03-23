@@ -1561,55 +1561,17 @@ function wOpenAdd() {
 function wCloseAdd() { document.getElementById('wOverlay').classList.remove('open'); }
 function wHandleOverlay(e) { if(e.target===document.getElementById('wOverlay')) wCloseAdd(); }
 
-async function wHandleUpload(e) {
+function wHandleUpload(e) {
   const file = e.target.files[0]; if(!file) return; e.target.value='';
-  const scan = document.getElementById('wScan');
-  const uploadText = document.getElementById('wUploadText');
-  const originalText = uploadText ? uploadText.textContent : '';
-
-  scan.classList.add('scanning');
-  if(uploadText) uploadText.textContent = '正在去除背景…';
-
-  try {
-    // 先本地预览
-    const localUrl = URL.createObjectURL(file);
-    document.getElementById('wPreviewImg').src = localUrl;
+  document.getElementById('wScan').classList.add('scanning');
+  normalizeImg(URL.createObjectURL(file)).then(url => {
+    wPendingImg = url;
+    document.getElementById('wPreviewImg').src = url;
     document.getElementById('wPreview').classList.add('visible');
     document.getElementById('wUploadZone').classList.add('has-preview');
-
-    // 调用抠图 API
-    const { Client } = await import('https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js');
-    const client = await Client.connect('not-lain/background-removal');
-    const result = await client.predict('/image', { image: file });
-
-    // 取返回的透明PNG
-    const resultData = result.data[0];
-    const imgUrl = resultData?.url || resultData?.path || localUrl;
-
-    // 转为 base64 存储
-    const res = await fetch(imgUrl);
-    const blob = await res.blob();
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      wPendingImg = reader.result;
-      document.getElementById('wPreviewImg').src = reader.result;
-      scan.classList.remove('scanning');
-      if(uploadText) uploadText.textContent = originalText;
-      wCheckSave();
-    };
-    reader.readAsDataURL(blob);
-
-  } catch(err) {
-    console.error('抠图失败，使用原图', err);
-    // 失败时用原图兜底
-    normalizeImg(URL.createObjectURL(file)).then(url => {
-      wPendingImg = url;
-      document.getElementById('wPreviewImg').src = url;
-      scan.classList.remove('scanning');
-      if(uploadText) uploadText.textContent = originalText;
-      wCheckSave();
-    });
-  }
+    document.getElementById('wScan').classList.remove('scanning');
+    wCheckSave();
+  });
 }
 function wSelCat(el, cat) {
   document.querySelectorAll('.w-chip').forEach(c=>c.classList.remove('active'));
