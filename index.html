@@ -2032,7 +2032,7 @@ async function aiCallReplicate(personUrl, garmentUrl) {
 
       statusText.textContent = msgs[Math.min(Math.floor(attempts / 5), msgs.length - 1)];
 
-      const resultRes = await fetch(`${BACKEND}/result?id=${predictionId}`);
+      const resultRes = await fetch(`${BACKEND}/result?id=${predictionId}&t=${Date.now()}`);
       const resultData = await resultRes.json();
 
       if (resultData.status === 'succeeded') {
