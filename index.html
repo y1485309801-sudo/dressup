@@ -1141,7 +1141,7 @@ body {
           <div class="w-upload-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
           </div>
-          <span class="w-upload-text">点击拍照 / 选择图片</span>
+          <span class="w-upload-text" id="wUploadText">点击拍照 / 选择图片</span>
           <div class="w-preview" id="wPreview"><img id="wPreviewImg" src="" alt=""></div>
           <div class="w-scan" id="wScan"></div>
         </div>
@@ -1561,17 +1561,55 @@ function wOpenAdd() {
 function wCloseAdd() { document.getElementById('wOverlay').classList.remove('open'); }
 function wHandleOverlay(e) { if(e.target===document.getElementById('wOverlay')) wCloseAdd(); }
 
-function wHandleUpload(e) {
+async function wHandleUpload(e) {
   const file = e.target.files[0]; if(!file) return; e.target.value='';
-  document.getElementById('wScan').classList.add('scanning');
-  normalizeImg(URL.createObjectURL(file)).then(url => {
-    wPendingImg = url;
-    document.getElementById('wPreviewImg').src = url;
+  const scan = document.getElementById('wScan');
+  const uploadText = document.getElementById('wUploadText');
+  const originalText = uploadText ? uploadText.textContent : '';
+
+  scan.classList.add('scanning');
+  if(uploadText) uploadText.textContent = '正在去除背景…';
+
+  try {
+    // 先本地预览
+    const localUrl = URL.createObjectURL(file);
+    document.getElementById('wPreviewImg').src = localUrl;
     document.getElementById('wPreview').classList.add('visible');
     document.getElementById('wUploadZone').classList.add('has-preview');
-    document.getElementById('wScan').classList.remove('scanning');
-    wCheckSave();
-  });
+
+    // 调用抠图 API
+    const { Client } = await import('https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js');
+    const client = await Client.connect('not-lain/background-removal');
+    const result = await client.predict('/image', { image: file });
+
+    // 取返回的透明PNG
+    const resultData = result.data[0];
+    const imgUrl = resultData?.url || resultData?.path || localUrl;
+
+    // 转为 base64 存储
+    const res = await fetch(imgUrl);
+    const blob = await res.blob();
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      wPendingImg = reader.result;
+      document.getElementById('wPreviewImg').src = reader.result;
+      scan.classList.remove('scanning');
+      if(uploadText) uploadText.textContent = originalText;
+      wCheckSave();
+    };
+    reader.readAsDataURL(blob);
+
+  } catch(err) {
+    console.error('抠图失败，使用原图', err);
+    // 失败时用原图兜底
+    normalizeImg(URL.createObjectURL(file)).then(url => {
+      wPendingImg = url;
+      document.getElementById('wPreviewImg').src = url;
+      scan.classList.remove('scanning');
+      if(uploadText) uploadText.textContent = originalText;
+      wCheckSave();
+    });
+  }
 }
 function wSelCat(el, cat) {
   document.querySelectorAll('.w-chip').forEach(c=>c.classList.remove('active'));
@@ -1971,7 +2009,6 @@ function dStartDressup() {
     clone.style.width  = tr.width  + 'px';
     clone.style.height = tr.height + 'px';
     clone.style.borderRadius = '24px';
-    // clone到位后，同时淡出clone + 淡入aiPhoto，无缝交叉
     setTimeout(() => {
       const photo = document.getElementById('aiPhoto');
       photo.classList.add('visible');
@@ -1981,7 +2018,57 @@ function dStartDressup() {
     }, 460);
   }));
 
-  setTimeout(() => aiShowResult(), 5500);
+  // 收集第一件选中的衣服图片
+  let clothImgSrc = null;
+  const rowMap2 = { top:'tops-row', pants:'pants-row', shoes:'shoes-row', caps:'caps-row' };
+  Object.keys(dSelected).some(cat => {
+    const id = dSelected[cat]; if (!id) return false;
+    const row = document.getElementById(rowMap2[cat]); if (!row) return false;
+    const cards = row.querySelectorAll('.product-card:not(.ghost-card)');
+    for (const c of cards) {
+      if (c.id === 'dcard-'+id || (c.onclick && c.onclick.toString().includes(id))) {
+        const img = c.querySelector('img');
+        if (img) { clothImgSrc = img.src; return true; }
+      }
+    }
+    return false;
+  });
+
+  // 调用 Replicate API
+  aiCallReplicate(personUrl, clothImgSrc);
+}
+
+async function aiCallReplicate(personUrl, garmentUrl) {
+  const statusText = document.getElementById('aiStatusText');
+  // 你的 Vercel 后端地址，部署后替换
+  const BACKEND_URL = 'https://dressup-backend.vercel.app/api/dressup';
+
+  try {
+    statusText.textContent = '正在为你换装';
+
+    const res = await fetch(BACKEND_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        human_img: personUrl,
+        garm_img: garmentUrl || personUrl
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || '换装失败');
+    }
+
+    document.getElementById('aiResultImg').style.backgroundImage = `url('${data.imageUrl}')`;
+    aiShowResult();
+
+  } catch (err) {
+    console.error('换衣失败:', err);
+    statusText.textContent = '换装失败，请重试';
+    document.getElementById('aiDots').style.display = 'none';
+  }
 }
 
 function aiShowResult() {
@@ -2046,7 +2133,23 @@ function aiRegenerate() {
     resultImg.style.transition = '';
   }));
 
-  setTimeout(() => aiShowResult(), 5500);
+  setTimeout(() => {
+    const personUrl = document.getElementById('aiPhoto').style.backgroundImage.replace(/url\(['"]?|['"]?\)/g,'');
+    let clothImgSrc = null;
+    const rowMap2 = { top:'tops-row', pants:'pants-row', shoes:'shoes-row', caps:'caps-row' };
+    Object.keys(dSelected).some(cat => {
+      const id = dSelected[cat]; if (!id) return false;
+      const row = document.getElementById(rowMap2[cat]); if (!row) return false;
+      for (const c of row.querySelectorAll('.product-card:not(.ghost-card)')) {
+        if (c.id === 'dcard-'+id || (c.onclick && c.onclick.toString().includes(id))) {
+          const img = c.querySelector('img');
+          if (img) { clothImgSrc = img.src; return true; }
+        }
+      }
+      return false;
+    });
+    aiCallReplicate(personUrl, clothImgSrc);
+  }, 500);
 }
 
 function aiZoom() {
