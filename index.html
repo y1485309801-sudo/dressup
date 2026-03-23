@@ -2000,6 +2000,22 @@ function dStartDressup() {
   aiCallReplicate(personUrl, clothImgSrc);
 }
 
+// 压缩图片到指定尺寸和质量
+function compressImage(base64, maxWidth = 768, quality = 0.85) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = base64;
+  });
+}
+
 async function aiCallReplicate(personUrl, garmentUrl) {
   const statusText = document.getElementById('aiStatusText');
   const BACKEND = 'https://dressup-backend-ecru.vercel.app/api';
@@ -2007,33 +2023,41 @@ async function aiCallReplicate(personUrl, garmentUrl) {
   try {
     statusText.textContent = '正在为你换装';
 
-    // 1. 启动任务
+    // 压缩图片再发送
+    console.log('压缩图片...');
+    const compressedPerson = await compressImage(personUrl, 768, 0.85);
+    const compressedGarment = await compressImage(garmentUrl || personUrl, 768, 0.85);
+    console.log('人物图片大小:', Math.round(compressedPerson.length / 1024), 'KB');
+    console.log('衣服图片大小:', Math.round(compressedGarment.length / 1024), 'KB');
+
+    // 启动任务
     const startRes = await fetch(`${BACKEND}/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        human_img: personUrl,
-        garm_img: garmentUrl || personUrl
+        human_img: compressedPerson,
+        garm_img: compressedGarment
       })
     });
 
     const startData = await startRes.json();
+    console.log('启动结果:', startData);
     if (!startData.success) throw new Error(startData.error || '启动失败');
 
     const predictionId = startData.predictionId;
 
-    // 2. 轮询结果
+    // 轮询结果
     const msgs = ['正在为你换装', '分析体型中', 'AI 生成中', '即将完成'];
     let attempts = 0;
 
     while (attempts < 60) {
       await new Promise(r => setTimeout(r, 3000));
       attempts++;
-
       statusText.textContent = msgs[Math.min(Math.floor(attempts / 5), msgs.length - 1)];
 
       const resultRes = await fetch(`${BACKEND}/result?id=${predictionId}&t=${Date.now()}`);
       const resultData = await resultRes.json();
+      console.log('轮询结果:', resultData.status);
 
       if (resultData.status === 'succeeded') {
         document.getElementById('aiResultImg').style.backgroundImage = `url('${resultData.imageUrl}')`;
@@ -2042,7 +2066,6 @@ async function aiCallReplicate(personUrl, garmentUrl) {
       } else if (resultData.status === 'failed') {
         throw new Error(resultData.error || '生成失败');
       }
-      // 继续轮询 starting/processing
     }
 
     throw new Error('等待超时，请重试');
@@ -2051,6 +2074,7 @@ async function aiCallReplicate(personUrl, garmentUrl) {
     console.error('换衣失败:', err);
     statusText.textContent = '换装失败，请重试';
     document.getElementById('aiDots').style.display = 'none';
+    document.getElementById('aiScanBeam').style.display = 'none';
   }
 }
 
